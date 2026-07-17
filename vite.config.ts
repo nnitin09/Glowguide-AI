@@ -23,6 +23,15 @@ export default defineConfig(({mode}) => {
                 stream.pipe(res);
                 return;
               }
+            } else if (req.url === '/GlowGuide_AI_Project_Report.docx') {
+              const filePath = path.join(__dirname, 'public', 'GlowGuide_AI_Project_Report.docx');
+              if (fs.existsSync(filePath)) {
+                res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+                res.setHeader('Content-Disposition', 'attachment; filename="GlowGuide_AI_Project_Report.docx"');
+                const stream = fs.createReadStream(filePath);
+                stream.pipe(res);
+                return;
+              }
             }
             next();
           });

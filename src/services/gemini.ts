@@ -23,7 +23,7 @@ export interface ChatMessage {
   text: string;
 }
 
-export async function chatWithBeautyBot(history: ChatMessage[], newMessage: string): Promise<string> {
+export async function chatWithBeautyBot(history: ChatMessage[], newMessage: string, imageBase64?: string): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY || "";
   if (!apiKey) {
     throw new Error("Gemini API key is missing.");
@@ -33,15 +33,31 @@ export async function chatWithBeautyBot(history: ChatMessage[], newMessage: stri
   
   const contents = [...history.map(msg => ({
     role: msg.role === 'model' ? 'model' : 'user',
-    parts: [{ text: msg.text }]
-  })), { role: 'user', parts: [{ text: newMessage }] }];
+    parts: [{ text: msg.text }] as any[]
+  }))];
+
+  const newMessageParts: any[] = [{ text: newMessage }];
+  contents.push({ role: 'user', parts: newMessageParts });
+
+  if (imageBase64) {
+    // Find the first user message in the conversation and inject the image there
+    const firstUserMsg = contents.find(c => c.role === 'user');
+    if (firstUserMsg) {
+      firstUserMsg.parts.unshift({
+        inlineData: {
+          mimeType: "image/jpeg",
+          data: imageBase64.split(",")[1],
+        },
+      });
+    }
+  }
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash", // Switch to 2.5 flash to ensure multimodal is solid
       contents,
       config: {
-        systemInstruction: "You are GlowGuide AI, a friendly beauty, makeup, and skincare expert. Your goal is to provide helpful, easy-to-understand, and personalized beauty advice. Explain things simply using everyday English so that anyone can understand, avoiding complex jargon or overly scientific terms. When a user asks about a concern or look, suggest simple product types, easy-to-find ingredients, and clear, step-by-step instructions. Ask the user simple questions about their skin type or what they like. Format your responses beautifully using markdown, with clear headings, bullet points, and bold text so it's easy to read. Respond ONLY to queries related to beauty, makeup, skincare, and styling. Politely decline any off-topic requests.",
+        systemInstruction: "You are GlowGuide AI, a friendly beauty, makeup, and skincare expert. Your goal is to provide helpful, easy-to-understand, and personalized beauty advice. Explain things simply using everyday English so that anyone can understand, avoiding complex jargon or overly scientific terms. When a user asks about a concern or look, suggest simple product types, easy-to-find ingredients, and clear, step-by-step instructions. Ask the user simple questions about their skin type or what they like. Format your responses beautifully using markdown, with clear headings, bullet points, and bold text so it's easy to read. Respond ONLY to queries related to beauty, makeup, skincare, and styling. Politely decline any off-topic requests. If the user provided an image, refer to it and answer questions about it.",
       }
     });
 

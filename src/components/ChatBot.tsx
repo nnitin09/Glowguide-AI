@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Send, ArrowLeft, Loader2, User, Sparkles } from 'lucide-react';
-import { chatWithBeautyBot, ChatMessage } from '../services/gemini';
+import { chatWithBeautyBot, ChatMessage, MakeupRecommendation } from '../services/gemini';
 import Markdown from 'react-markdown';
 
 const SUGGESTIONS = [
@@ -11,10 +11,13 @@ const SUGGESTIONS = [
   "Best skincare ingredients for glowing skin?"
 ];
 
-export function ChatBot({ onClose }: { onClose: () => void }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'model', text: "Hello! I'm your GlowGuide AI beauty expert. If you prefer not to upload a photo, we can chat! Tell me about your skin type, undertone, or what kind of makeup/skincare recommendations you're looking for." }
-  ]);
+export function ChatBot({ onClose, imageBase64, analysisResult }: { onClose: () => void, imageBase64?: string, analysisResult?: MakeupRecommendation | null }) {
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    if (analysisResult) {
+      return [{ role: 'model', text: `Hi! I'm GlowGuide AI. I just analyzed your photo and suggested some recommendations for your ${analysisResult.skinTone} skin tone and ${analysisResult.faceShape} face shape. Feel free to ask me any questions about the recommendations, your skin, or styling tips!` }];
+    }
+    return [{ role: 'model', text: "Hello! I'm your GlowGuide AI beauty expert. If you prefer not to upload a photo, we can chat! Tell me about your skin type, undertone, or what kind of makeup/skincare recommendations you're looking for." }];
+  });
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
@@ -35,7 +38,7 @@ export function ChatBot({ onClose }: { onClose: () => void }) {
 
     try {
       // Send all history except the one we just added (which is passed as newMessage)
-      const reply = await chatWithBeautyBot(messages, userMessage.text);
+      const reply = await chatWithBeautyBot(messages, userMessage.text, imageBase64);
       setMessages([...currentMessages, { role: 'model', text: reply }]);
     } catch (error) {
       console.error(error);
